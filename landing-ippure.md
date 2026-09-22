@@ -24,16 +24,16 @@
 在 Sub-Store 订阅的「脚本」里加操作脚本，链接后接参数：
 
 ```
-https://raw.githubusercontent.com/xream/scripts/main/surge/modules/sub-store-scripts/check/geo.js#api=https%3A%2F%2Fmy.ippure.com%2Fv1%2Finfo&format={{api.countryCode}} {{api.asOrganization}} 风险{{api.fraudScore}} - {{proxy.name}}&concurrency=5&timeout=8000
+https://raw.githubusercontent.com/xream/scripts/main/surge/modules/sub-store-scripts/check/geo.js#api=https%3A%2F%2Fmy.ippure.com%2Fv1%2Finfo&format={{api.countryCode}} {{api.asOrganization}} - {{proxy.name}} {{api.fraudScore}}&concurrency=5&timeout=8000
 ```
 
 `format` 支持 eval，可用三元表达式。示例（已实测渲染）：
 
 | format | 结果 |
 | --- | --- |
-| `{{api.countryCode}} {{api.asOrganization}} 风险{{api.fraudScore}} - {{proxy.name}}` | `HK Kirino LLC 风险85 - 香港01 🇭🇰` |
-| `{{proxy.name}} 险{{api.fraudScore}}{{api.isResidential ? "住宅" : "机房"}}` | `香港01 🇭🇰 险85机房` |
-| `{{api.country}} {{api.asOrganization}} [{{api.fraudScore}}]` | `Hong Kong SAR China Kirino LLC [85]` |
+| `{{api.countryCode}} {{api.asOrganization}} - {{proxy.name}} {{api.fraudScore}}` | `HK Kirino LLC - 香港01 🇭🇰 85` |
+| `{{proxy.name}} {{api.fraudScore}}` | `香港01 🇭🇰 85` |
+| `{{api.country}} {{api.asOrganization}} {{api.fraudScore}}` | `Hong Kong SAR China Kirino LLC 85` |
 
 ## 注意
 
