@@ -38,3 +38,18 @@ https://raw.githubusercontent.com/xream/scripts/main/surge/modules/sub-store-scr
 
 - 落地检测每个节点都要实际走一次代理连接，慢且耗流量，`concurrency` 别开太高。
 - 这是落地检测，与入口脚本 `entrance-isp-flag.js` 用途不同，不要混用。
+
+## Android root 模块（HTTP META）用法
+
+若使用 Sub-Store for Android（Magisk/KernelSU 模块，自带 HTTP META），**不能用上面的 `geo.js`**，要用 `http_meta_geo.js` 并指向本机 HTTP META（默认端口 9876）。
+
+在 Sub-Store 前端对订阅添加「操作脚本」，选「链接」类型，粘贴：
+
+```
+https://raw.githubusercontent.com/xream/scripts/main/surge/modules/sub-store-scripts/check/http_meta_geo.js#http_meta_protocol=http&http_meta_host=127.0.0.1&http_meta_port=9876&http_meta_start_delay=3000&http_meta_proxy_timeout=10000&api=https%3A%2F%2Fmy.ippure.com%2Fv1%2Finfo&format={{api.countryCode}} - {{proxy.name}} {{api.fraudScore}}&concurrency=5&timeout=8000
+```
+
+结果示例：`HK - 香港01 🇭🇰 85`。
+
+- `http_meta_port` 要与模块 `sub_store.env` 里的 `PORT` 一致（默认 9876）。
+- `geo.js` 是 Loon/Surge（需 http-client-policy 模块）用的；Android root 模块用 `http_meta_geo.js`。
