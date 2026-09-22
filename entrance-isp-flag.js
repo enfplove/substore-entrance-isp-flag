@@ -1,13 +1,15 @@
 /**
- * Sub-Store 操作脚本：入口运营商 + 原节点国家国旗
+ * Sub-Store 操作脚本：入口地区+运营商 + 原节点国家国旗
  *
  * 示例结果：
- *   电信 🇭🇰
- *   AWS 🇺🇸
- *   鹏博士 🇭🇰
+ *   杭州电信 🇭🇰
+ *   美国 AWS 🇺🇸
+ *   CF 🇭🇰（Cloudflare 等 anycast 入口地区不可信，只显示厂商）
  *
  * 说明：
- * - 入口运营商根据 proxy.server 查询，不检测落地/出口运营商。
+ * - 入口地区+运营商根据 proxy.server 查询，不检测落地/出口运营商。
+ * - 国内入口显示「城市+运营商」（如 杭州电信）；境外入口显示「国家+运营商」（如 美国 AWS）。
+ * - anycast CDN（Cloudflare/Akamai/Fastly/CloudFront/Gcore）不加地区前缀。
  * - 原节点国家国旗从原节点名称中提取；没有识别到国旗时保留原名称。
  * - 默认使用 ip-api.com。该接口有频率限制，建议控制并发数。
  *
@@ -17,6 +19,7 @@
  * - retries：失败重试次数，默认 1
  * - concurrency：并发数，默认 5
  * - keep_original：没有识别到原国家国旗时是否保留原名称，默认 true
+ * - region=true：是否在运营商前加入口地区（国内=城市，境外=国家），默认 true
  * - resolve：server 为域名时是否由脚本自行解析为 IP（DoH），默认 true
  * - doh：自定义 DoH 源，逗号分隔 JSON API 地址；默认按序使用
  *   阿里(223.5.5.5) → 腾讯(doh.pub) → Cloudflare(1.1.1.1) → Google(dns.google)
@@ -30,11 +33,12 @@ async function operator(proxies = [], targetPlatform, context) {
   const retries = Number($arguments.retries ?? 1)
   const concurrency = Math.max(1, Number($arguments.concurrency || 5))
   const keepOriginal = String($arguments.keep_original ?? 'true') !== 'false'
+  const regionEnabled = String($arguments.region ?? 'true') !== 'false'
   const cacheEnabled = String($arguments.cache ?? 'true') !== 'false'
   const cache = typeof scriptResourceCache !== 'undefined' ? scriptResourceCache : null
   const apiTemplate =
     $arguments.api ||
-    'http://ip-api.com/json/{{proxy.server}}?lang=zh-CN&fields=status,message,countryCode,isp,org,as,asname,hosting,proxy,mobile'
+    'http://ip-api.com/json/{{proxy.server}}?lang=zh-CN&fields=status,message,country,countryCode,city,regionName,isp,org,as,asname,hosting,proxy,mobile'
 
   // ---- DNS 自解析：域名节点先经多 DoH 源解析为 IP，再交给入口 API ----
   const resolveEnabled = String($arguments.resolve ?? 'true') !== 'false'
@@ -67,7 +71,7 @@ async function operator(proxies = [], targetPlatform, context) {
 
     try {
       const serverForApi = resolveEnabled ? await resolveServer(proxy.server) : proxy.server
-      const cacheKey = `entrance-isp:${serverForApi}`
+      const cacheKey = `entrance-isp-v2:${serverForApi}` // v2: 响应含 city/country 地区字段，与旧缓存隔离
       const cached = cacheEnabled && cache?.get(cacheKey)
       const body = cached || parseBody(await requestWithRetry(
         apiTemplate.replace(/\{\{proxy\.server\}\}/g, String(serverForApi))
@@ -82,8 +86,9 @@ async function operator(proxies = [], targetPlatform, context) {
       const provider = classifyProvider(body)
       if (!provider) return
 
+      const region = regionPrefix(body, provider)
       // 没有原国旗时，keep_original=false 会使用无旗帜名称；默认配置会直接保留原名。
-      proxy.name = flag ? `${provider} ${flag}` : provider
+      proxy.name = flag ? `${region}${provider} ${flag}` : `${region}${provider}`
       $.info(`[${originalName}] ${proxy.name}`)
     } catch (error) {
       $.error(`[${originalName}] 入口运营商检测失败: ${error?.message || error}`)
@@ -98,6 +103,21 @@ async function operator(proxies = [], targetPlatform, context) {
     } catch (_) {
       return null
     }
+  }
+
+  // 入口地区前缀：国内=城市（去掉省市区县后缀），境外=国家；anycast CDN 地区不可信不加
+  function regionPrefix(info, provider) {
+    if (!regionEnabled) return ''
+    const asText = [info.isp, info.org, info.as, info.asname].filter(Boolean).join(' ')
+    if (/cloudflare|akamai|fastly|cloudfront|\bgcore\b/i.test(asText)) return ''
+    const cc = String(info.countryCode || '').toUpperCase()
+    if (cc === 'CN' || info.country === '中国') {
+      const city = String(info.city || info.regionName || '')
+        .replace(/(特别行政区|自治区|省|市|区|县)$/i, '')
+        .trim()
+      return city
+    }
+    return info.country ? `${info.country} ` : ''
   }
 
   function classifyProvider(info) {
