@@ -17,6 +17,12 @@
  * - retries：失败重试次数，默认 1
  * - concurrency：并发数，默认 5
  * - keep_original：没有识别到原国家国旗时是否保留原名称，默认 true
+ * - resolve：server 为域名时是否由脚本自行解析为 IP（DoH），默认 true
+ * - doh：自定义 DoH 源，逗号分隔 JSON API 地址；默认按序使用
+ *   阿里(223.5.5.5) → 腾讯(doh.pub) → Cloudflare(1.1.1.1) → Google(dns.google)
+ *   前两个国内直连优先，某个失败/超时自动切下一个
+ * - doh_timeout：单个 DoH 源的请求超时，默认 3000 毫秒
+ * - dns_cache：是否用持久缓存记录 域名→IP 解析结果，默认 true
  */
 async function operator(proxies = [], targetPlatform, context) {
   const $ = $substore
@@ -29,6 +35,21 @@ async function operator(proxies = [], targetPlatform, context) {
   const apiTemplate =
     $arguments.api ||
     'http://ip-api.com/json/{{proxy.server}}?lang=zh-CN&fields=status,message,countryCode,isp,org,as,asname,hosting,proxy,mobile'
+
+  // ---- DNS 自解析：域名节点先经多 DoH 源解析为 IP，再交给入口 API ----
+  const resolveEnabled = String($arguments.resolve ?? 'true') !== 'false'
+  const dohTimeout = Number($arguments.doh_timeout || 3000)
+  const dnsCacheEnabled = String($arguments.dns_cache ?? 'true') !== 'false'
+  const DOH_SOURCES = ($arguments.doh
+    ? String($arguments.doh).split(',').map(u => ({ url: u.trim() }))
+    : [
+        { name: 'aliyun', url: 'https://223.5.5.5/resolve?name={{domain}}&type=1' },
+        { name: 'tencent', url: 'https://120.53.53.53/dns-query?name={{domain}}&type=1' },
+        { name: 'cloudflare', url: 'https://1.1.1.1/dns-query?name={{domain}}&type=A' },
+        { name: 'google', url: 'https://dns.google/resolve?name={{domain}}&type=1' },
+      ]
+  ).filter(s => s.url)
+  const dnsCache = new Map() // 本次运行内的 域名→IP 缓存
 
   await runWithConcurrency(
     proxies.map(proxy => () => checkProxy(proxy)),
@@ -45,13 +66,14 @@ async function operator(proxies = [], targetPlatform, context) {
     if (!flag && keepOriginal) return
 
     try {
-      const cacheKey = `entrance-isp:${proxy.server}`
+      const serverForApi = resolveEnabled ? await resolveServer(proxy.server) : proxy.server
+      const cacheKey = `entrance-isp:${serverForApi}`
       const cached = cacheEnabled && cache?.get(cacheKey)
       const body = cached || parseBody(await requestWithRetry(
-        apiTemplate.replace(/\{\{proxy\.server\}\}/g, String(proxy.server))
+        apiTemplate.replace(/\{\{proxy\.server\}\}/g, String(serverForApi))
       ))
 
-      if (!cached && cacheEnabled && body) cache?.set(cacheKey, body)
+      if (!cached && cacheEnabled && body && body.status !== 'fail') cache?.set(cacheKey, body)
 
       if (!body || body.status === 'fail') {
         throw new Error(body?.message || 'API 返回无效结果')
@@ -182,6 +204,64 @@ async function operator(proxies = [], targetPlatform, context) {
       if (rule.test(name)) return flag
     }
     return ''
+  }
+
+  // 判断是否为 IP 字面量（v4 或 v6），避免依赖运行环境的 ProxyUtils
+  function isIPLiteral(s) {
+    const str = String(s || '')
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(str)) return true
+    return str.includes(':') && /^[0-9a-fA-F:]+$/.test(str)
+  }
+
+  // 域名 → IP：依次尝试多个 DoH 源（JSON API），命中即返回；全部失败回退原域名
+  async function resolveServer(server) {
+    try {
+      if (!server) return server
+      if (isIPLiteral(server)) return server
+
+      const domain = String(server)
+      if (dnsCache.has(domain)) return dnsCache.get(domain)
+
+      if (dnsCacheEnabled && cache) {
+        const cachedIp = cache.get(`entrance-dns:${domain}`)
+        if (cachedIp && isIPLiteral(cachedIp)) {
+          dnsCache.set(domain, cachedIp)
+          $.info(`[DNS] ${domain} -> ${cachedIp}（持久缓存）`)
+          return cachedIp
+        }
+      }
+
+      for (const source of DOH_SOURCES) {
+        try {
+          const res = await $.http.get({
+            url: source.url.replace(/\{\{domain\}\}/g, encodeURIComponent(domain)),
+            timeout: dohTimeout,
+            headers: { accept: 'application/dns-json' },
+          })
+          const raw = res?.body ?? res?.data ?? res
+          let data = {}
+          try {
+            data = typeof raw === 'object' ? raw : JSON.parse(String(raw || '{}'))
+          } catch (_) {}
+          const answers = data.Answer || []
+          const record = answers.find(a => a && Number(a.type) === 1 && isIPLiteral(a.data) && a.data !== '0.0.0.0')
+          if (record) {
+            const ip = record.data
+            dnsCache.set(domain, ip)
+            if (dnsCacheEnabled && cache) cache.set(`entrance-dns:${domain}`, ip)
+            $.info(`[DNS] ${domain} -> ${ip}（${source.name || 'custom'}）`)
+            return ip
+          }
+          $.info(`[DNS] ${source.name || 'custom'} 未返回 ${domain} 的 A 记录，切换下一源`)
+        } catch (e) {
+          $.info(`[DNS] ${source.name || 'custom'} 解析 ${domain} 失败: ${e?.message || e}，切换下一源`)
+        }
+      }
+      $.error(`[DNS] ${domain} 所有 DoH 源均失败，回退原域名`)
+    } catch (e) {
+      $.error(`[DNS] ${server} 解析异常: ${e?.message || e}`)
+    }
+    return server
   }
 
   function requestWithRetry(url) {
