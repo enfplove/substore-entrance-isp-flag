@@ -1,55 +1,51 @@
 # 落地 IP 风险检测（IPPure）
 
-本仓库主脚本 `entrance-isp-flag.js` 查的是**入口**运营商。若想在节点名里加**落地** IP 的风险评分，用折腾鲨的落地检测脚本 `geo.js` 配合 IPPure 接口即可，无需改代码。
+本仓库主脚本 `entrance-isp-flag.js` 查的是**入口**运营商；`landing-isp-flag.js` 查的是节点**落地** IP，并把 IPPure 的风险评分接到节点名末尾。
 
-落地检测需请求经过节点发出，因此仅在支持 `ability=http-client-policy` 的环境有效：Loon、Surge，或 Node.js 版 Sub-Store 配合 HTTP META。
+`landing-isp-flag.js` fork 自折腾鲨的 `http_meta_geo.js`，已内置默认值，直接引用即可，无需再带一长串参数：
 
-## 接口
+- 默认 api：`https://my.ippure.com/v1/info`
+- 默认 format：`{{api.countryCode}} - {{proxy.name}} {{api.fraudScore}}`
+- 结果示例：`HK - 香港01 🇭🇰 85`
 
-`https://my.ippure.com/v1/info`（无需鉴权，返回 JSON）。查的是调用者出口 IP，放进落地检测后即为该节点落地信息。
+## 环境要求
 
-返回字段：
+落地检测需请求经过节点发出，只在能配合 HTTP META 的环境有效：
 
-- `fraudScore` 风险分 0-100，越高越差
-- `isResidential` 是否住宅 IP（true/false）
-- `isBroadcast` 是否广播 IP
-- `country` / `countryCode` 落地国家
-- `asOrganization` 落地 ASN 组织
-- `city` 落地城市
+- Sub-Store Node.js 版
+- Android root 模块（Sub-Store for Android，自带 HTTP META，默认端口 9876）
 
-> 注：该接口自称测试阶段，字段可能变动；评分为其主观合成，参考即可。
+App 版（Loon/Surge）请改用原作者 `geo.js`。
 
 ## 用法
 
-在 Sub-Store 订阅的「脚本」里加操作脚本，链接后接参数：
+在 Sub-Store 前端对订阅添加「脚本操作」，选「链接」类型，粘贴：
 
 ```
-https://raw.githubusercontent.com/xream/scripts/main/surge/modules/sub-store-scripts/check/geo.js#api=https%3A%2F%2Fmy.ippure.com%2Fv1%2Finfo&format={{api.countryCode}} - {{proxy.name}} {{api.fraudScore}}&concurrency=5&timeout=8000
+https://raw.githubusercontent.com/enfplove/substore-isp-flag/master/landing-isp-flag.js
 ```
 
-`format` 支持 eval，可用三元表达式。示例（已实测渲染）：
+默认 HTTP META 为 `127.0.0.1:9876`，与 Android root 模块一致，通常无需改动。若端口不同，追加参数覆盖，例如：
 
-| format | 结果 |
-| --- | --- |
-| `{{api.countryCode}} - {{proxy.name}} {{api.fraudScore}}` | `HK - 香港01 🇭🇰 85` |
-| `{{proxy.name}} {{api.fraudScore}}` | `香港01 🇭🇰 85` |
+```
+...landing-isp-flag.js#http_meta_port=9877
+```
+
+## 可覆盖参数
+
+| 参数 | 说明 | 默认 |
+| --- | --- | --- |
+| `api` | 落地检测接口 | `https://my.ippure.com/v1/info` |
+| `format` | 命名格式，从 `api`/`proxy` 取值 | `{{api.countryCode}} - {{proxy.name}} {{api.fraudScore}}` |
+| `http_meta_host` | HTTP META 地址 | `127.0.0.1` |
+| `http_meta_port` | HTTP META 端口 | `9876` |
+| `concurrency` | 并发数 | `10` |
+| `timeout` | 单节点超时(ms) | `5000` |
+
+IPPure 返回可用字段：`fraudScore`（0-100，越高越差）、`isResidential`、`isBroadcast`、`country`/`countryCode`、`asOrganization`、`city`。
 
 ## 注意
 
 - 落地检测每个节点都要实际走一次代理连接，慢且耗流量，`concurrency` 别开太高。
-- 这是落地检测，与入口脚本 `entrance-isp-flag.js` 用途不同，不要混用。
-
-## Android root 模块（HTTP META）用法
-
-若使用 Sub-Store for Android（Magisk/KernelSU 模块，自带 HTTP META），**不能用上面的 `geo.js`**，要用 `http_meta_geo.js` 并指向本机 HTTP META（默认端口 9876）。
-
-在 Sub-Store 前端对订阅添加「操作脚本」，选「链接」类型，粘贴：
-
-```
-https://raw.githubusercontent.com/xream/scripts/main/surge/modules/sub-store-scripts/check/http_meta_geo.js#http_meta_protocol=http&http_meta_host=127.0.0.1&http_meta_port=9876&http_meta_start_delay=3000&http_meta_proxy_timeout=10000&api=https%3A%2F%2Fmy.ippure.com%2Fv1%2Finfo&format={{api.countryCode}} - {{proxy.name}} {{api.fraudScore}}&concurrency=5&timeout=8000
-```
-
-结果示例：`HK - 香港01 🇭🇰 85`。
-
-- `http_meta_port` 要与模块 `sub_store.env` 里的 `PORT` 一致（默认 9876）。
-- `geo.js` 是 Loon/Surge（需 http-client-policy 模块）用的；Android root 模块用 `http_meta_geo.js`。
+- IPPure 接口自称测试阶段，字段可能变动；评分为其主观合成，参考即可。
+- 与入口脚本 `entrance-isp-flag.js` 用途不同，不要混用。
