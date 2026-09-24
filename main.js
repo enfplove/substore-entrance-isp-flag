@@ -272,7 +272,7 @@ async function operator(proxies = [], targetPlatform, context) {
   function regionPrefix(info, provider) {
     if (!regionEnabled) return ''
     const asText = [info.isp, info.org, info.as, info.asname].filter(Boolean).join(' ')
-    if (/cloudflare|akamai|fastly|cloudfront|\bgcore\b/i.test(asText)) return ''
+    if (/cloudflare|akamai|fastly|cloudfront|\bg-?core\b/i.test(asText)) return ''
     // 百度云 IP 的 ip-api 城市常错记成北京西城（实际多在广东），按需只显示“百度云”不写城市
     if (provider === '百度云') return ''
     const cc = String(info.countryCode || '').toUpperCase()
