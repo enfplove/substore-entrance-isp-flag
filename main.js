@@ -273,6 +273,8 @@ async function operator(proxies = [], targetPlatform, context) {
     if (!regionEnabled) return ''
     const asText = [info.isp, info.org, info.as, info.asname].filter(Boolean).join(' ')
     if (/cloudflare|akamai|fastly|cloudfront|\bgcore\b/i.test(asText)) return ''
+    // 百度云 IP 的 ip-api 城市常错记成北京西城（实际多在广东），按需只显示“百度云”不写城市
+    if (provider === '百度云') return ''
     const cc = String(info.countryCode || '').toUpperCase()
     if (cc === 'CN' || info.country === '中国') {
       const city = String(info.city || info.regionName || '')
@@ -303,6 +305,7 @@ async function operator(proxies = [], targetPlatform, context) {
       [/alibaba cloud|aliyun|阿里云/i, '阿里云'],
       [/tencent cloud|腾讯云/i, '腾讯云'],
       [/huawei cloud|华为云/i, '华为云'],
+      [/百度|baidu/i, '百度云'],
       [/digitalocean/i, 'DigitalOcean'],
       [/vultr|choopa/i, 'Vultr'],
       [/linode|akamai connected cloud/i, 'Linode'],
@@ -314,6 +317,30 @@ async function operator(proxies = [], targetPlatform, context) {
       [/cloudflare/i, 'Cloudflare'],
       [/upcloud/i, 'UpCloud'],
       [/scaleway/i, 'Scaleway'],
+      // 国内云厂商
+      [/金山云|kingsoft cloud|ksyun/i, '金山云'],
+      [/京东云|jd\s*cloud|jdcloud/i, '京东云'],
+      [/火山引擎|volcengine|volcano engine|bytedance|字节跳动/i, '火山引擎'],
+      [/ucloud|优刻得/i, 'UCloud'],
+      [/青云|qingcloud/i, '青云'],
+      [/天翼云|ctyun/i, '天翼云'],
+      [/移动云|china mobile cloud/i, '移动云'],
+      [/联通云|沃云|unicom cloud/i, '联通云'],
+      [/世纪互联|21vianet/i, '世纪互联'],
+      [/网宿|wangsu/i, '网宿'],
+      // 国际云/主机商
+      [/\bibm\b|softlayer/i, 'IBM Cloud'],
+      [/\bg-?core\b|gcorelabs/i, 'Gcore'],
+      [/zenlayer/i, 'Zenlayer'],
+      [/racknerd/i, 'RackNerd'],
+      [/\bbuyvm\b|frantech/i, 'BuyVM'],
+      [/greencloud/i, 'GreenCloud'],
+      [/hosthatch/i, 'HostHatch'],
+      [/kamatera/i, 'Kamatera'],
+      [/\bnetcup\b/i, 'netcup'],
+      [/\bm247\b/i, 'M247'],
+      [/\bakamai\b/i, 'Akamai'],
+      [/\bfastly\b/i, 'Fastly'],
       [/腾讯云|阿里云|华为云/i, '云厂商'],
     ]
     for (const [rule, name] of cloudRules) {
