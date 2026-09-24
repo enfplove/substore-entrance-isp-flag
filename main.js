@@ -1,47 +1,13 @@
-/**
- * Sub-Store 操作脚本：入口地区+运营商 + 原节点国家/地区旗帜
- *
- * 示例结果：
- *   杭州电信 🇭🇰
- *   美国 AWS 🇺🇸
- *   CF 🇭🇰（Cloudflare 等 anycast 入口地区不可信，只显示厂商）
- *
- * 说明：
- * - 入口地区+运营商根据 proxy.server 查询，不检测落地/出口运营商。
- * - 国内入口显示「城市+运营商」（如 杭州电信）；境外入口显示「国家+运营商」（如 美国 AWS）。
- * - anycast CDN（Cloudflare/Akamai/Fastly/CloudFront/Gcore）不加地区前缀。
- * - 旗帜识别只用地区映射表（REGION_MAP）的文本关键词匹配：
- *   实测有机场把台湾标成 🇨🇳、把美国标成 🇺🇲（emoji 错、文本对），
- *   因此不再从名称里提取旗帜 emoji，一律以关键词为准；匹配不到则保留原名称。
- * - 流量/到期/官网等信息节点（Traffic/Expire/剩余流量/套餐到期/官网…）先过滤，跳过不改名。
- * - 默认使用 ip-api.com。该接口有频率限制，建议控制并发数。
- * - 改名后对重名节点自动编号（从 1 开始），避免内核加载时被强制去重成 (2)(3)。
- *
- * 可选参数：
- * - api：自定义 API 地址，必须包含 {{proxy.server}}
- * - timeout：请求超时，默认 5000 毫秒
- * - retries：失败重试次数，默认 1
- * - concurrency：并发数，默认 5
- * - keep_original：没有匹配到地区关键词时是否保留原名称，默认 true
- * - region=true：是否在运营商前加入口地区（国内=城市，境外=国家），默认 true
- * - resolve：server 为域名时是否由脚本自行解析为 IP（DoH），默认 true
- * - doh：自定义 DoH 源，逗号分隔 JSON API 地址；默认按序使用
- *   阿里(223.5.5.5) → 腾讯(doh.pub) → Cloudflare(1.1.1.1) → Google(dns.google)
- *   前两个国内直连优先，某个失败/超时自动切下一个
- * - doh_timeout：单个 DoH 源的请求超时，默认 3000 毫秒
- * - dns_cache：是否用持久缓存记录 域名→IP 解析结果，默认 true
- * - number=true：是否对重名节点自动编号（从 1 开始），默认 true
- * - number_sep：编号与名字之间的分隔符，默认空格
- */
 
-// ---------------------------------------------------------------------------
-// 地区映射表：文本关键词 → 旗帜。顺序敏感：越靠前优先级越高，
-// 大意相近的地区（印度尼西亚/印度、美英、朝韩）务必把更具体的放前面。
-// 已覆盖实际订阅中出现过的全部地区词（含纯英文命名 Hong Kong/Taiwan/
-// United States/Johannesburg 等）。
-// ---------------------------------------------------------------------------
+
+
+
+
+
+
+
 const REGION_MAP = [
-  // ---- 东亚 ----
+  
   { cc: 'HK', flag: '🇭🇰', re: /香港|hong[\s-]*kong|\bHK\d*\b/i },
   { cc: 'MO', flag: '🇲🇴', re: /澳门|macao|macau|\bMO\d*\b/i },
   { cc: 'TW', flag: '🇹🇼', re: /台湾|taiwan|taipei|台北|新北|台中|台南|高雄|彰化|中华电信|中華電信|hinet|chunghwa|\bTW\d*\b/i },
@@ -51,7 +17,7 @@ const REGION_MAP = [
   { cc: 'KP', flag: '🇰🇵', re: /朝鲜|北韩|north korea|\bKP\b/i },
   { cc: 'MN', flag: '🇲🇳', re: /蒙古|mongolia|\bMN\b/i },
 
-  // ---- 东南亚 ----
+  
   { cc: 'SG', flag: '🇸🇬', re: /新加坡|狮城|singapore|\bSG\d*\b/i },
   { cc: 'MY', flag: '🇲🇾', re: /马来西亚|大马|malaysia|\bMY\d*\b/i },
   { cc: 'TH', flag: '🇹🇭', re: /泰国|thailand|bangkok|曼谷|\bTH\b/i },
@@ -63,7 +29,7 @@ const REGION_MAP = [
   { cc: 'LA', flag: '🇱🇦', re: /老挝|寮国|laos/i },
   { cc: 'BN', flag: '🇧🇳', re: /文莱|brunei|\bBN\b/i },
 
-  // ---- 南亚 ----
+  
   { cc: 'IN', flag: '🇮🇳', re: /印度(?!尼西亚)|india(?!nesia)|mumbai|孟买|\bIN\d*\b/i },
   { cc: 'PK', flag: '🇵🇰', re: /巴基斯坦|pakistan|\bPK\b/i },
   { cc: 'BD', flag: '🇧🇩', re: /孟加拉|bangladesh|\bBD\b/i },
@@ -71,7 +37,7 @@ const REGION_MAP = [
   { cc: 'NP', flag: '🇳🇵', re: /尼泊尔|nepal|\bNP\b/i },
   { cc: 'MV', flag: '🇲🇻', re: /马尔代夫|maldives|\bMV\b/i },
 
-  // ---- 中东 ----
+  
   { cc: 'AE', flag: '🇦🇪', re: /阿联酋|阿拉伯联合酋长国|迪拜|dubai|emirates|u\.?a\.?e\.?|\bAE\b/i },
   { cc: 'SA', flag: '🇸🇦', re: /沙特|saudi|\bSA\b/i },
   { cc: 'QA', flag: '🇶🇦', re: /卡塔尔|qatar|\bQA\b/i },
@@ -84,11 +50,11 @@ const REGION_MAP = [
   { cc: 'JO', flag: '🇯🇴', re: /约旦|jordan|\bJO\b/i },
   { cc: 'TR', flag: '🇹🇷', re: /土耳其|turkey|turkiye|istanbul|伊斯坦布尔|\bTR\b/i },
 
-  // ---- 中亚 ----
+  
   { cc: 'KZ', flag: '🇰🇿', re: /哈萨克斯坦|哈萨克|kazakhstan|almaty|阿拉木图|\bKZ\b/i },
   { cc: 'UZ', flag: '🇺🇿', re: /乌兹别克斯坦|乌兹别克|uzbekistan|tashkent|塔什干|\bUZ\b/i },
 
-  // ---- 欧洲 ----
+  
   { cc: 'GB', flag: '🇬🇧', re: /英国|伦敦|united[\s-]*kingdom|britain|england|london|\bUK\d*\b/i },
   { cc: 'DE', flag: '🇩🇪', re: /德国|法兰克福|germany|frankfurt|berlin|\bDE\d*\b/i },
   { cc: 'FR', flag: '🇫🇷', re: /法国|巴黎|france|paris|\bFR\d*\b/i },
@@ -126,13 +92,13 @@ const REGION_MAP = [
   { cc: 'UA', flag: '🇺🇦', re: /乌克兰|ukraine|kyiv|kiev|\bUA\b/i },
   { cc: 'RU', flag: '🇷🇺', re: /俄罗斯|莫斯科|圣彼得堡|russia|moscow|saint[\s-]*petersburg|\bRU\b/i },
 
-  // ---- 北美 ----
+  
   { cc: 'US', flag: '🇺🇸', re: /美国|美东|美西|united[\s-]*states|los[\s-]*angeles|san[\s-]*jose|san[\s-]*diego|seattle|chicago|dallas|miami|houston|new[\s-]*york|phoenix|硅谷|洛杉矶|圣何塞|西雅图|纽约|达拉斯|芝加哥|凤凰城|\bUS\d*\b|\bUSA\b|u\.s\.a\.?/i },
   { cc: 'CA', flag: '🇨🇦', re: /加拿大|canada|toronto|vancouver|montreal|多伦多|温哥华|\bCA\d*\b/i },
   { cc: 'MX', flag: '🇲🇽', re: /墨西哥|mexico|\bMX\b/i },
   { cc: 'PA', flag: '🇵🇦', re: /巴拿马|panama|\bPA\b/i },
 
-  // ---- 南美 ----
+  
   { cc: 'BR', flag: '🇧🇷', re: /巴西|brazil|sao[\s-]*paulo|rio|圣保罗|\bBR\b/i },
   { cc: 'AR', flag: '🇦🇷', re: /阿根廷|argentina|buenos[\s-]*aires|\bAR\b/i },
   { cc: 'CL', flag: '🇨🇱', re: /智利|chile|santiago|\bCL\b/i },
@@ -142,12 +108,12 @@ const REGION_MAP = [
   { cc: 'CR', flag: '🇨🇷', re: /哥斯达黎加|costa[\s-]*rica|\bCR\b/i },
   { cc: 'UY', flag: '🇺🇾', re: /乌拉圭|uruguay|montevideo|\bUY\b/i },
 
-  // ---- 大洋洲 ----
+  
   { cc: 'AU', flag: '🇦🇺', re: /澳大利亚|澳洲|悉尼|墨尔本|australia|sydney|melbourne|\bAU\d*\b/i },
   { cc: 'NZ', flag: '🇳🇿', re: /新西兰|new[\s-]*zealand|auckland|奥克兰|\bNZ\b/i },
   { cc: 'FJ', flag: '🇫🇯', re: /斐济|fiji|\bFJ\b/i },
 
-  // ---- 非洲 ----
+  
   { cc: 'ZA', flag: '🇿🇦', re: /南非|south[\s-]*africa|johannesburg|约翰内斯堡|开普敦|capetown|\bZA\b/i },
   { cc: 'EG', flag: '🇪🇬', re: /埃及|egypt|cairo|开罗|\bEG\b/i },
   { cc: 'NG', flag: '🇳🇬', re: /尼日利亚|nigeria|lagos|\bNG\b/i },
@@ -160,7 +126,7 @@ const REGION_MAP = [
   { cc: 'CY', flag: '🇨🇾', re: /塞浦路斯|cyprus|\bCY\b/i },
 ]
 
-// 流量/到期/官网等信息节点：先筛掉，跳过不处理
+
 const INFO_NODE_RE = /traffic|expire|剩余|到期|重置|官网|订阅|invalid|失效|失効/i
 
 async function operator(proxies = [], targetPlatform, context) {
@@ -178,7 +144,7 @@ async function operator(proxies = [], targetPlatform, context) {
     $arguments.api ||
     'http://ip-api.com/json/{{proxy.server}}?lang=zh-CN&fields=status,message,country,countryCode,city,regionName,isp,org,as,asname,hosting,proxy,mobile'
 
-  // ---- DNS 自解析：域名节点先经多 DoH 源解析为 IP，再交给入口 API ----
+  
   const resolveEnabled = String($arguments.resolve ?? 'true') !== 'false'
   const dohTimeout = Number($arguments.doh_timeout || 3000)
   const dnsCacheEnabled = String($arguments.dns_cache ?? 'true') !== 'false'
@@ -191,14 +157,14 @@ async function operator(proxies = [], targetPlatform, context) {
         { name: 'google', url: 'https://dns.google/resolve?name={{domain}}&type=1' },
       ]
   ).filter(s => s.url)
-  const dnsCache = new Map() // 本次运行内的 域名→IP 缓存
+  const dnsCache = new Map() 
 
   await runWithConcurrency(
     proxies.map(proxy => () => checkProxy(proxy)),
     concurrency
   )
 
-  // 改名完成后统一编号：对最终重名的节点从 1 开始追加序号
+  
   if (numberEnabled) numberDuplicates()
 
   return proxies
@@ -207,16 +173,16 @@ async function operator(proxies = [], targetPlatform, context) {
     if (!proxy || !proxy.server || !proxy.name) return
 
     const originalName = String(proxy.name)
-    // 信息节点（流量/到期/官网等）先筛掉，不查询不改名
+    
     if (INFO_NODE_RE.test(originalName)) return
 
-    // 旗帜只靠地区映射表的关键词匹配，不做 emoji 提取
+    
     const flag = getOriginalFlag(originalName)
     if (!flag && keepOriginal) return
 
     try {
       const serverForApi = resolveEnabled ? await resolveServer(proxy.server) : proxy.server
-      const cacheKey = `entrance-isp-v2:${serverForApi}` // v2: 响应含 city/country 地区字段，与旧缓存隔离
+      const cacheKey = `entrance-isp-v2:${serverForApi}` 
       const cached = cacheEnabled && cache?.get(cacheKey)
       const body = cached || parseBody(await requestWithRetry(
         apiTemplate.replace(/\{\{proxy\.server\}\}/g, String(serverForApi))
@@ -239,7 +205,7 @@ async function operator(proxies = [], targetPlatform, context) {
     }
   }
 
-  // 对重名节点从 1 开始编号；只出现一次的名字保持不变
+  
   function numberDuplicates() {
     const counts = new Map()
     for (const p of proxies) {
@@ -268,12 +234,11 @@ async function operator(proxies = [], targetPlatform, context) {
     }
   }
 
-  // 入口地区前缀：国内=城市（去掉省市区县后缀），境外=国家；anycast CDN 地区不可信不加
+  
   function regionPrefix(info, provider) {
     if (!regionEnabled) return ''
     const asText = [info.isp, info.org, info.as, info.asname].filter(Boolean).join(' ')
     if (/cloudflare|akamai|fastly|cloudfront|\bg-?core\b/i.test(asText)) return ''
-    // 百度云 IP 的 ip-api 城市常错记成北京西城（实际多在广东），按需只显示“百度云”不写城市
     if (provider === '百度云') return ''
     const cc = String(info.countryCode || '').toUpperCase()
     if (cc === 'CN' || info.country === '中国') {
@@ -289,14 +254,12 @@ async function operator(proxies = [], targetPlatform, context) {
     const text = [info.isp, info.org, info.as, info.asname].filter(Boolean).join(' ')
     const normalized = text.toLowerCase()
 
-    // 鹏博士旗下/相关宽带名称优先判断，避免被宽泛的 broadband 规则覆盖。
     if (
       /长城宽带|great wall broadband|greatwall broadband|gwbn|鹏博士|dr\.?\s*peng|drpeng|d-peng|pengnet/i.test(text)
     ) {
       return '鹏博士'
     }
 
-    // 云厂商优先于普通 ISP。返回统一、简短的厂商名称。
     const cloudRules = [
       [/amazon web services|amazon aws|\baws\b|amazon-?com|amazon technologies/i, 'AWS'],
       [/microsoft azure|\bazure\b|microsoft corporation/i, 'Azure'],
@@ -317,7 +280,7 @@ async function operator(proxies = [], targetPlatform, context) {
       [/cloudflare/i, 'Cloudflare'],
       [/upcloud/i, 'UpCloud'],
       [/scaleway/i, 'Scaleway'],
-      // 国内云厂商
+      
       [/金山云|kingsoft cloud|ksyun/i, '金山云'],
       [/京东云|jd\s*cloud|jdcloud/i, '京东云'],
       [/火山引擎|volcengine|volcano engine|bytedance|字节跳动/i, '火山引擎'],
@@ -328,7 +291,7 @@ async function operator(proxies = [], targetPlatform, context) {
       [/联通云|沃云|unicom cloud/i, '联通云'],
       [/世纪互联|21vianet/i, '世纪互联'],
       [/网宿|wangsu/i, '网宿'],
-      // 国际云/主机商
+      
       [/\bibm\b|softlayer/i, 'IBM Cloud'],
       [/\bg-?core\b|gcorelabs/i, 'Gcore'],
       [/zenlayer/i, 'Zenlayer'],
@@ -347,10 +310,10 @@ async function operator(proxies = [], targetPlatform, context) {
       if (rule.test(text)) return name
     }
 
-    // hosting=true 但没有命中具体厂商时，也直接标记为云厂商。
+    
     if (info.hosting === true || info.hosting === 'true') return '云厂商'
 
-    // 运营商归一化。
+    
     const ispRules = [
       [/中国电信|china telecom|chinanet|ctgnet|telecom argentina/i, '电信'],
       [/中国联通|china unicom|cncgroup|cucc|unicom/i, '联通'],
@@ -363,7 +326,7 @@ async function operator(proxies = [], targetPlatform, context) {
       if (rule.test(text)) return name
     }
 
-    // 其他地区常见宽带/运营商，可按需要继续补充。
+    
     const otherRules = [
       [/comcast/i, 'Comcast'],
       [/\batt\b|at&t/i, 'AT&T'],
@@ -377,11 +340,10 @@ async function operator(proxies = [], targetPlatform, context) {
       if (rule.test(normalized)) return name
     }
 
-    // 未知 ISP 返回 asname/组织名，避免把有效入口全部标成“未知”。
+    
     return String(info.asname || info.org || info.isp || '').trim() || '未知运营商'
   }
 
-  // 旗帜识别：只用地区映射表的文本关键词匹配（机场 emoji 常标错，不提取 emoji）
   function getOriginalFlag(name) {
     for (const entry of REGION_MAP) {
       if (entry.re.test(name)) return entry.flag
@@ -389,14 +351,12 @@ async function operator(proxies = [], targetPlatform, context) {
     return ''
   }
 
-  // 判断是否为 IP 字面量（v4 或 v6），避免依赖运行环境的 ProxyUtils
   function isIPLiteral(s) {
     const str = String(s || '')
     if (/^\d{1,3}(\.\d{1,3}){3}$/.test(str)) return true
     return str.includes(':') && /^[0-9a-fA-F:]+$/.test(str)
   }
 
-  // 域名 → IP：依次尝试多个 DoH 源（JSON API），命中即返回；全部失败回退原域名
   async function resolveServer(server) {
     try {
       if (!server) return server
