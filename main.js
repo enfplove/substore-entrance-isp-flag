@@ -19,9 +19,9 @@ const REGION_MAP = [
 
   
   { cc: 'SG', flag: '🇸🇬', re: /新加坡|狮城|singapore|\bSG\d*\b/i },
-  { cc: 'MY', flag: '🇲🇾', re: /马来西亚|大马|malaysia|\bMY\d*\b/i },
+  { cc: 'MY', flag: '🇲🇾', re: /马来西亚|大马|malaysia/i },
   { cc: 'TH', flag: '🇹🇭', re: /泰国|thailand|bangkok|曼谷|\bTH\b/i },
-  { cc: 'ID', flag: '🇮🇩', re: /印度尼西亚|印尼|indonesia|\bID\d*\b/i },
+  { cc: 'ID', flag: '🇮🇩', re: /印度尼西亚|印尼|indonesia/i },
   { cc: 'PH', flag: '🇵🇭', re: /菲律宾|philippines|\bPH\b/i },
   { cc: 'VN', flag: '🇻🇳', re: /越南|vietnam|\bVN\b/i },
   { cc: 'MM', flag: '🇲🇲', re: /缅甸|myanmar|burma|\bMM\b/i },
@@ -30,7 +30,7 @@ const REGION_MAP = [
   { cc: 'BN', flag: '🇧🇳', re: /文莱|brunei|\bBN\b/i },
 
   
-  { cc: 'IN', flag: '🇮🇳', re: /印度(?!尼西亚)|india(?!nesia)|mumbai|孟买|\bIN\d*\b/i },
+  { cc: 'IN', flag: '🇮🇳', re: /印度(?!尼西亚)|india(?!nesia)|mumbai|孟买/i },
   { cc: 'PK', flag: '🇵🇰', re: /巴基斯坦|pakistan|\bPK\b/i },
   { cc: 'BD', flag: '🇧🇩', re: /孟加拉|bangladesh|\bBD\b/i },
   { cc: 'LK', flag: '🇱🇰', re: /斯里兰卡|sri lanka|\bLK\b/i },
@@ -59,18 +59,18 @@ const REGION_MAP = [
   { cc: 'DE', flag: '🇩🇪', re: /德国|法兰克福|germany|frankfurt|berlin|\bDE\d*\b/i },
   { cc: 'FR', flag: '🇫🇷', re: /法国|巴黎|france|paris|\bFR\d*\b/i },
   { cc: 'NL', flag: '🇳🇱', re: /荷兰|阿姆斯特丹|netherlands|holland|amsterdam|\bNL\d*\b/i },
-  { cc: 'IT', flag: '🇮🇹', re: /意大利|罗马(?!尼亚)|米兰|italy|rome(?!nia)|milan|\bIT\b/i },
-  { cc: 'ES', flag: '🇪🇸', re: /西班牙|马德里|spain|madrid|\bES\b/i },
+  { cc: 'IT', flag: '🇮🇹', re: /意大利|罗马(?!尼亚)|米兰|italy|rome(?!nia)|milan/i },
+  { cc: 'ES', flag: '🇪🇸', re: /西班牙|马德里|spain|madrid/i },
   { cc: 'PT', flag: '🇵🇹', re: /葡萄牙|portugal|lisbon|\bPT\b/i },
   { cc: 'CH', flag: '🇨🇭', re: /瑞士|苏黎世|switzerland|zurich|\bCH\b/i },
   { cc: 'SE', flag: '🇸🇪', re: /瑞典|斯德哥尔摩|sweden|stockholm|\bSE\b/i },
-  { cc: 'NO', flag: '🇳🇴', re: /挪威|norway|oslo|\bNO\b/i },
+  { cc: 'NO', flag: '🇳🇴', re: /挪威|norway|oslo/i },
   { cc: 'FI', flag: '🇫🇮', re: /芬兰|finland|helsinki|\bFI\b/i },
   { cc: 'DK', flag: '🇩🇰', re: /丹麦|denmark|copenhagen|\bDK\b/i },
-  { cc: 'IS', flag: '🇮🇸', re: /冰岛|iceland|reykjavik|\bIS\b/i },
+  { cc: 'IS', flag: '🇮🇸', re: /冰岛|iceland|reykjavik/i },
   { cc: 'IE', flag: '🇮🇪', re: /爱尔兰|ireland|dublin|\bIE\b/i },
-  { cc: 'AT', flag: '🇦🇹', re: /奥地利|维也纳|austria|vienna|\bAT\b/i },
-  { cc: 'BE', flag: '🇧🇪', re: /比利时|brussels|belgium|\bBE\b/i },
+  { cc: 'AT', flag: '🇦🇹', re: /奥地利|维也纳|austria|vienna/i },
+  { cc: 'BE', flag: '🇧🇪', re: /比利时|brussels|belgium/i },
   { cc: 'PL', flag: '🇵🇱', re: /波兰|华沙|poland|warsaw|\bPL\b/i },
   { cc: 'CZ', flag: '🇨🇿', re: /捷克|prague|czech|\bCZ\b/i },
   { cc: 'HU', flag: '🇭🇺', re: /匈牙利|hungary|budapest|\bHU\b/i },
@@ -88,7 +88,7 @@ const REGION_MAP = [
   { cc: 'MK', flag: '🇲🇰', re: /北马其顿|马其顿|macedonia|\bMK\b/i },
   { cc: 'AL', flag: '🇦🇱', re: /阿尔巴尼亚|albania|tirana|\bAL\b/i },
   { cc: 'GE', flag: '🇬🇪', re: /格鲁吉亚|georgia|tbilisi|\bGE\b/i },
-  { cc: 'AM', flag: '🇦🇲', re: /亚美尼亚|armenia|yerevan|\bAM\b/i },
+  { cc: 'AM', flag: '🇦🇲', re: /亚美尼亚|armenia|yerevan/i },
   { cc: 'UA', flag: '🇺🇦', re: /乌克兰|ukraine|kyiv|kiev|\bUA\b/i },
   { cc: 'RU', flag: '🇷🇺', re: /俄罗斯|莫斯科|圣彼得堡|russia|moscow|saint[\s-]*petersburg|\bRU\b/i },
 
@@ -102,7 +102,7 @@ const REGION_MAP = [
   { cc: 'BR', flag: '🇧🇷', re: /巴西|brazil|sao[\s-]*paulo|rio|圣保罗|\bBR\b/i },
   { cc: 'AR', flag: '🇦🇷', re: /阿根廷|argentina|buenos[\s-]*aires|\bAR\b/i },
   { cc: 'CL', flag: '🇨🇱', re: /智利|chile|santiago|\bCL\b/i },
-  { cc: 'CO', flag: '🇨🇴', re: /哥伦比亚|colombia|bogota|\bCO\b/i },
+  { cc: 'CO', flag: '🇨🇴', re: /哥伦比亚|colombia|bogota/i },
   { cc: 'PE', flag: '🇵🇪', re: /秘鲁|peru|lima|\bPE\b/i },
   { cc: 'EC', flag: '🇪🇨', re: /厄瓜多尔|ecuador|quito|\bEC\b/i },
   { cc: 'CR', flag: '🇨🇷', re: /哥斯达黎加|costa[\s-]*rica|\bCR\b/i },
@@ -125,6 +125,8 @@ const REGION_MAP = [
   { cc: 'AO', flag: '🇦🇴', re: /安哥拉|angola|\bAO\b/i },
   { cc: 'CY', flag: '🇨🇾', re: /塞浦路斯|cyprus|\bCY\b/i },
 ]
+
+const AMBIG_CODES = [['IN','🇮🇳'],['ID','🇮🇩'],['MY','🇲🇾'],['IT','🇮🇹'],['IS','🇮🇸'],['AT','🇦🇹'],['BE','🇧🇪'],['NO','🇳🇴'],['CO','🇨🇴'],['ES','🇪🇸'],['AM','🇦🇲']]
 
 
 const INFO_NODE_RE = /traffic|expire|剩余|到期|重置|官网|订阅|invalid|失效|失効/i
@@ -310,10 +312,6 @@ async function operator(proxies = [], targetPlatform, context) {
       if (rule.test(text)) return name
     }
 
-    
-    if (info.hosting === true || info.hosting === 'true') return '云厂商'
-
-    
     const ispRules = [
       [/中国电信|china telecom|chinanet|ctgnet|telecom argentina/i, '电信'],
       [/中国联通|china unicom|cncgroup|cucc|unicom/i, '联通'],
@@ -341,12 +339,17 @@ async function operator(proxies = [], targetPlatform, context) {
     }
 
     
+    if (info.hosting === true || info.hosting === 'true') return '云厂商'
+
     return String(info.asname || info.org || info.isp || '').trim() || '未知运营商'
   }
 
   function getOriginalFlag(name) {
     for (const entry of REGION_MAP) {
       if (entry.re.test(name)) return entry.flag
+    }
+    for (const [code, flag] of AMBIG_CODES) {
+      if (new RegExp(`\\b${code}\\d+\\b`).test(name)) return flag
     }
     return ''
   }
@@ -387,9 +390,12 @@ async function operator(proxies = [], targetPlatform, context) {
             data = typeof raw === 'object' ? raw : JSON.parse(String(raw || '{}'))
           } catch (_) {}
           const answers = data.Answer || []
-          const record = answers.find(a => a && Number(a.type) === 1 && isIPLiteral(a.data) && a.data !== '0.0.0.0')
-          if (record) {
-            const ip = record.data
+          const aRecords = answers
+            .filter(a => a && Number(a.type) === 1 && isIPLiteral(a.data) && a.data !== '0.0.0.0')
+            .map(a => a.data)
+            .sort()
+          if (aRecords.length) {
+            const ip = aRecords[0]
             dnsCache.set(domain, ip)
             if (dnsCacheEnabled && cache) cache.set(`entrance-dns:${domain}`, ip)
             $.info(`[DNS] ${domain} -> ${ip}（${source.name || 'custom'}）`)
